@@ -91,6 +91,8 @@ async fn handler(login: &str, owner: &str, repo: &str, payload: EventPayload) {
         };
         match openai.chat_completion(&chat_id, &question, &co).await {
             Ok(r) => {
+                send_message_to_channel(&slack_workspace, "ch_out", r.choice.clone());
+
                 if r.choice.to_ascii_lowercase().contains("yes") {
                     let body = format!("This issue is making people angry, please take immediate actions: {issue_title} by {user}\n{issue_url}");
 
