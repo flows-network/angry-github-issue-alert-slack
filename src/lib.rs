@@ -77,7 +77,7 @@ async fn handler(login: &str, owner: &str, repo: &str, payload: EventPayload) {
         };
 
         let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
-        let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please answer [YES] if you think they're angry, otherwise answer [NO]");
+        let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
         let chat_id = format!("ISSUE#{issue_number}");
 
         let mut openai = OpenAIFlows::new();
