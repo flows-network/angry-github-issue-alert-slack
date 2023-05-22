@@ -12,7 +12,7 @@ use std::env;
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-pub async fn run()  {
+pub async fn run() {
     dotenv().ok();
     let github_owner = env::var("github_owner").unwrap_or("alabulei1".to_string());
     let github_repo = env::var("github_repo").unwrap_or("a-test".to_string());
@@ -25,7 +25,6 @@ pub async fn run()  {
         |payload| handler(&github_owner, &github_repo, payload),
     )
     .await;
-
 }
 
 async fn handler(owner: &str, repo: &str, payload: EventPayload) {
@@ -71,6 +70,7 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
                 Ok(pages) => {
                     for page in pages {
                         let _body = page.body.unwrap_or("".to_string());
+                        send_message_to_channel(&slack_workspace, "ch_in", _body.clone());
                         comment_inner.push_str(&_body);
                     }
                 }
@@ -81,7 +81,6 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
         } else {
             "".to_string()
         };
-        send_message_to_channel(&slack_workspace, "ch_in", comments.clone());
 
         let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
         let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
