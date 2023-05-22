@@ -12,7 +12,7 @@ use std::env;
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-pub async fn run() -> anyhow::Result<()> {
+pub async fn run()  {
     dotenv().ok();
     let github_owner = env::var("github_owner").unwrap_or("alabulei1".to_string());
     let github_repo = env::var("github_repo").unwrap_or("a-test".to_string());
@@ -26,7 +26,6 @@ pub async fn run() -> anyhow::Result<()> {
     )
     .await;
 
-    Ok(())
 }
 
 async fn handler(owner: &str, repo: &str, payload: EventPayload) {
@@ -97,6 +96,8 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
         };
         match openai.chat_completion(&chat_id, &question, &co).await {
             Ok(r) => {
+                send_message_to_channel(&slack_workspace, "ch_mid", r.choice.clone());
+
                 if r.choice.to_ascii_lowercase().contains("yes") {
                     let body = format!("This issue is making people angry, please take immediate actions: {issue_title} by {user}\n{issue_url}");
 
