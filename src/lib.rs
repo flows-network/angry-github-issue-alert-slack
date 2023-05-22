@@ -81,6 +81,7 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
         } else {
             "".to_string()
         };
+        send_message_to_channel(&slack_workspace, "ch_in", comments.clone());
 
         let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
         let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
