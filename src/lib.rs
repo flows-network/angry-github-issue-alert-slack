@@ -62,25 +62,17 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
             .collect::<Vec<String>>()
             .join(", ");
 
-        let comments = if issue.comments > 0 {
-            let octocrab = get_octo(&Default);
-            let issue = octocrab.issues(owner, repo);
-            let mut comment_inner = "".to_string();
-            match issue.list_comments(issue_number).send().await {
-                Ok(pages) => {
-                    for page in pages {
-                        let _body = page.body.unwrap_or("".to_string());
-                        send_message_to_channel(&slack_workspace, "ch_in", _body.clone());
-                        comment_inner.push_str(&_body);
-                    }
-                }
-                Err(_e) => {}
-            }
+        let mut comments = String::new();
 
-            comment_inner
-        } else {
-            "".to_string()
-        };
+        let octocrab = get_octo(&Default);
+        let issue = octocrab.issues(owner, repo);
+        if let Ok(pages) = issue.list_comments(issue_number).send().await {
+            for page in pages {
+                let _body = page.body.unwrap_or("".to_string());
+                send_message_to_channel(&slack_workspace, "ch_in", _body.clone());
+                comments.push_str(&_body);
+            }
+        }
 
         let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
         let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
