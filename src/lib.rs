@@ -9,10 +9,11 @@ use openai_flows::chat::{ChatModel, ChatOptions};
 use openai_flows::OpenAIFlows;
 use slack_flows::send_message_to_channel;
 use std::env;
+use tiktoken_rs::cl100k_base;
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-pub async fn run() -> anyhow::Result<()> {
+pub async fn run() {
     dotenv().ok();
     let github_owner = env::var("github_owner").unwrap_or("alabulei1".to_string());
     let github_repo = env::var("github_repo").unwrap_or("a-test".to_string());
@@ -25,8 +26,6 @@ pub async fn run() -> anyhow::Result<()> {
         |payload| handler(&github_owner, &github_repo, payload),
     )
     .await;
-
-    Ok(())
 }
 
 async fn handler(owner: &str, repo: &str, payload: EventPayload) {
@@ -64,27 +63,39 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
             .collect::<Vec<String>>()
             .join(", ");
 
-        let comments = if issue.comments > 0 {
-            let octocrab = get_octo(&Default);
-            let issue = octocrab.issues(owner, repo);
-            let mut comment_inner = "".to_string();
-            match issue.list_comments(issue_number).send().await {
-                Ok(pages) => {
-                    for page in pages {
-                        let _body = page.body.unwrap_or("".to_string());
-                        comment_inner.push_str(&_body);
-                    }
-                }
-                Err(_e) => {}
+        let mut comments = String::new();
+
+        let octocrab = get_octo(&Default);
+        let issue = octocrab.issues(owner, repo);
+        if let Ok(pages) = issue.list_comments(issue_number).send().await {
+            for page in pages {
+                let _body = page.body.unwrap_or("".to_string());
+                comments.push_str(&_body);
             }
+        }
 
-            comment_inner
-        } else {
-            "".to_string()
-        };
+        let bpe = cl100k_base().unwrap();
 
-        let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
-        let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
+        let tokens = bpe.encode_ordinary(&comments);
+
+        if tokens.len() > 2000 {
+            let mut token_vec = tokens.to_vec();
+            token_vec.truncate(2000);
+            comments = match bpe.decode(token_vec) {
+                Ok(r) => r,
+                Err(_) => comments
+                    .split_whitespace()
+                    .take(1500)
+                    .collect::<Vec<&str>>()
+                    .join(" "),
+            };
+        }
+        let system = &format!("You are an AI co-owner of a GitHub repository, monitoring for issues where participants express strong negative sentiment. Your task is to analyze the conversation context based on the issue's title, labels, body text, and comments.");
+        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond in JSON format, a JSON literal only, nothing else:
+        {{
+            'choice': 'yes or no',
+            'confidence': 'confidence'
+        }}");
         let chat_id = format!("ISSUE#{issue_number}");
 
         let mut openai = OpenAIFlows::new();

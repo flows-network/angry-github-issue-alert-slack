@@ -14,3 +14,4 @@ tokio_wasi = { version = "1.25.0", features = ["macros", "rt"] }
 anyhow = "1"
 dotenv = "0.15.0"
 openai-flows = "0.7.1"
+tiktoken-rs = "0.2.2"
