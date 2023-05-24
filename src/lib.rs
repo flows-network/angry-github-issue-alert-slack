@@ -70,7 +70,6 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
         if let Ok(pages) = issue.list_comments(issue_number).send().await {
             for page in pages {
                 let _body = page.body.unwrap_or("".to_string());
-                send_message_to_channel(&slack_workspace, "ch_in", _body.clone());
                 comments.push_str(&_body);
             }
         }
@@ -92,7 +91,7 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
             };
         }
         let system = &format!("You are an AI co-owner of a GitHub repository, monitoring for issues where participants express strong negative sentiment. Your task is to analyze the conversation context based on the issue's title, labels, body text, and comments.");
-        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond in JSON format:
+        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond in JSON format, a JSON literal only, nothing else:
         {{
             'choice': 'yes or no',
             'confidence': 'confidence'
