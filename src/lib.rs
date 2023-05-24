@@ -84,11 +84,19 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
             token_vec.truncate(2000);
             comments = match bpe.decode(token_vec) {
                 Ok(r) => r,
-                Err(_) => comments.split_whitespace().take(1500).collect::<Vec<&str>>().join(" "),
+                Err(_) => comments
+                    .split_whitespace()
+                    .take(1500)
+                    .collect::<Vec<&str>>()
+                    .join(" "),
             };
         }
         let system = &format!("You are an AI co-owner of a GitHub repository, monitoring for issues where participants express strong negative sentiment. Your task is to analyze the conversation context based on the issue's title, labels, body text, and comments.");
-        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond with 'YES'. If not, respond with 'NO'.");
+        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond in JSON format:
+        {{
+            'choice': 'yes or no',
+            'confidence': 'confidence'
+        }}");
         let chat_id = format!("ISSUE#{issue_number}");
 
         let mut openai = OpenAIFlows::new();
