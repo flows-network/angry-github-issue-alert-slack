@@ -9,6 +9,7 @@ use openai_flows::chat::{ChatModel, ChatOptions};
 use openai_flows::OpenAIFlows;
 use slack_flows::send_message_to_channel;
 use std::env;
+use tiktoken_rs::cl100k_base;
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
@@ -74,8 +75,20 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
             }
         }
 
-        let system = &format!("You are the co-owner of a github repo, you're watching for issues where participants show strong dis-satisfaction with the issue they encountered, please analyze the wording and make judgement based on the whole context.");
-        let question = format!("The issue is titled {issue_title}, labeled {labels}, with body text {issue_body}, comments {comments}, based on this context, please judge how angry the issue has caused the affected people to be, please give me one-word absolute answer, answer [YES] if you think they're angry, with greater than 50% confidence, otherwise [NO]");
+        let bpe = cl100k_base().unwrap();
+
+        let tokens = bpe.encode_ordinary(&comments);
+
+        if tokens.len() > 2000 {
+            let mut token_vec = tokens.to_vec();
+            token_vec.truncate(2000);
+            comments = match bpe.decode(token_vec) {
+                Ok(r) => r,
+                Err(_) => comments.split_whitespace().take(1500).collect::<Vec<&str>>().join(" "),
+            };
+        }
+        let system = &format!("You are an AI co-owner of a GitHub repository, monitoring for issues where participants express strong negative sentiment. Your task is to analyze the conversation context based on the issue's title, labels, body text, and comments.");
+        let question = format!("An issue titled '{issue_title}', labeled as '{labels}', carries the following body text: '{issue_body}'. The discussion thread includes these comments: '{comments}'. Based on this context, evaluate whether the overall sentiment of this issue is significantly negative. If your confidence in this judgment is greater than 50%, respond with 'YES'. If not, respond with 'NO'.");
         let chat_id = format!("ISSUE#{issue_number}");
 
         let mut openai = OpenAIFlows::new();
