@@ -109,7 +109,7 @@ async fn handler(owner: &str, repo: &str, payload: EventPayload) {
         match openai.chat_completion(&chat_id, &question, &co).await {
             Ok(r) => {
                 if r.choice.to_ascii_lowercase().contains("yes") {
-                    let body = format!("This issue is making people angry, please take immediate actions: {issue_title} by {user}\n{issue_url}");
+                    let body = format!("It appears that this is an urgent matter. Please take immediate action. {issue_title} by {user}\n{issue_url}");
 
                     send_message_to_channel(&slack_workspace, &slack_channel, body);
                     return;
